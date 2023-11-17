@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LEO的二代摸鱼网站</title>
+    <style>
+        body {
+            background-color: #FFFFCC;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        @keyframes backgroundFade {
+            0% { background-color: #FFFFCC; }
+            100% { background-color: orange; }
+        }
+
+        h1 {
+            color: #3333FF;
+        }
+
+        .timezone-container,
+        .tomato-clock-container,
+        .memos-container {
+            background-color: #66CCFF;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 10px; /* 圆角边框 */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); /* 阴影效果 */
+            text-align: left; /* 文本左对齐 */
+        }
+
+        .lofi-button {
+            background-color: #99FF99;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .lofi-button:hover {
+            background-color: #88CC88;
+        }
+
+        .video-popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #FFFFFF;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            border-radius: 10px; /* 圆角边框 */
+        }
+
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+        }
+
+        .countdown-text {
+            font-size: 24px;
+            color: #333;
+        }
+
+        .progress-bar-container {
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #DDDDDD;
+        }
+
+        .progress {
+            width: 0;
+            height: 100%;
+            background-color: #FF6347;
+            transition: width 1s linear;
+        }
+
+        /* 添加按钮的样式 */
+        .previous-work-button {
+            display: inline-block;
+            background-color: #FFA500;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            text-decoration: none;
+            margin-top: 20px;
+        }
+
+        .previous-work-button:hover {
+            background-color: #FF8C00;
+        }
+
+        @media (max-width: 768px) {
+            .timezone-container,
+            .tomato-clock-container,
+            .memos-container {
+                padding: 10px;
+            }
+
+            .progress-bar {
+                height: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>LEO的二代摸鱼网站</h1>
+
+    <div class="timezone-container">
+        <h2>当前时区和时间</h2>
+        <p id="timezone"></p>
+    </div>
+
+    <div class="tomato-clock-container">
+        <h2>番茄时钟</h2>
+        <label for="countdown-select">选择倒计时时间：</label>
+        <select id="countdown-select">
+            <option value="1">1分钟</option>
+            <option value="30">30分钟</option>
+            <option value="45">45分钟</option>
+            <option value="60">60分钟</option>
+            <option value="90">90分钟</option>
+        </select>
+        <button id="start-button">开始</button>
+        <button id="pause-button" style="display:none;">暂停</button>
+        <button id="continue-button" style="display:none;">继续</button>
+        <button id="reset-button" style="display:none;">重置</button>
+        <div class="progress-bar-container">
+            <div class="progress-bar">
+                <div class="progress" id="progress"></div>
+            </div>
+        </div>
+        <p class="countdown-text" id="countdown-text"></p>
+    </div>
+
+    <div class="memos-container">
+        <h2>备忘录</h2>
+        <textarea id="memo-text" rows="4" cols="50" placeholder="输入备忘录内容"></textarea>
+        <button onclick="saveMemo()">保存备忘录</button>
+        <div id="memo-list"></div>
+    </div>
+
+    <button class="lofi-button" onclick="showVideoPopup()">lofi一下</button>
+
+    <div class="video-popup" id="video-popup">
+        <iframe width="700" height="400" src="https://www.bilibili.com/blackboard/live/live-activity-player.html?cid=27519423&quality=0" frameborder="no" framespacing="0" scrolling="no" allow="autoplay; encrypted-media" allowfullscreen="true"></iframe>
+        <span class="close-button" onclick="closeVideoPopup()">关闭</span>
+    </div>
+
+    <!-- 添加一个链接到前作页面的按钮 -->
+    <a href="previous_work.html" class="previous-work-button">看看前作</a>
+
+    <script>
+        const timezoneElement = document.getElementById('timezone');
+
+        function updateCurrentTime() {
+            const currentTime = new Date();
+            timezoneElement.textContent = `当前时区：${Intl.DateTimeFormat().resolvedOptions().timeZone}，当前时间：${currentTime.toLocaleString()}`;
+            setTimeout(updateCurrentTime, 1000);
+        }
+
+        updateCurrentTime();
+
+        let countdownInterval;
+        let remainingTime = 0;
+        let isPaused = false;
+
+        document.getElementById('start-button').addEventListener('click', startCountdown);
+        document.getElementById('pause-button').addEventListener('click', pauseCountdown);
+        document.getElementById('continue-button').addEventListener('click', continueCountdown);
+        document.getElementById('reset-button').addEventListener('click', resetCountdown);
+
+        function startCountdown() {
+            if (countdownInterval) clearInterval(countdownInterval);
+            const selectedTime = parseInt(document.getElementById('countdown-select').value, 10) * 60;
+            remainingTime = selectedTime;
+            updateCountdown();
+            countdownInterval = setInterval(updateCountdown, 1000);
+            document.getElementById('start-button').style.display = 'none';
+            document.getElementById('pause-button').style.display = 'inline';
+            document.getElementById('reset-button').style.display = 'inline';
+        }
+
+        function updateCountdown() {
+            if (remainingTime <= 0) {
+                clearInterval(countdownInterval);
+                document.body.style.animation = 'backgroundFade 2s infinite alternate'; // 加快背景颜色变化速度
+                document.getElementById('countdown-text').textContent = '时间到';
+                return;
+            }
+            const minutes = Math.floor(remainingTime / 60);
+            const seconds = remainingTime % 60;
+            document.getElementById('countdown-text').textContent = `${minutes}分${seconds}秒`;
+            const progressElement = document.getElementById('progress');
+            const selectedTime = parseInt(document.getElementById('countdown-select').value, 10) * 60;
+            progressElement.style.width = `${100 - (remainingTime / selectedTime) * 100}%`;
+            if (!isPaused) remainingTime--;
+        }
+
+        function pauseCountdown() {
+            clearInterval(countdownInterval);
+            isPaused = true;
+            document.getElementById('pause-button').style.display = 'none';
+            document.getElementById('continue-button').style.display = 'inline';
+        }
+
+        function continueCountdown() {
+            countdownInterval = setInterval(updateCountdown, 1000);
+            isPaused = false;
+            document.getElementById('continue-button').style.display = 'none';
+            document.getElementById('pause-button').style.display = 'inline';
+        }
+
+        function resetCountdown() {
+            clearInterval(countdownInterval);
+            remainingTime = 0;
+            document.getElementById('progress').style.width = '100%';
+            document.getElementById('countdown-text').textContent = '';
+            document.getElementById('start-button').style.display = 'inline';
+            document.getElementById('pause-button').style.display = 'none';
+            document.getElementById('continue-button').style.display = 'none';
+            document.getElementById('reset-button').style.display = 'none';
+            document.body.style.animation = 'none';
+        }
+
+        const memoTextElement = document.getElementById('memo-text');
+        const memoListElement = document.getElementById('memo-list');
+
+        function saveMemo() {
+            const memoText = memoTextElement.value;
+            const memoTime = new Date().toLocaleString();
+            const memoItem = document.createElement('p');
+            memoItem.textContent = `${memoTime}: ${memoText}`;
+            memoListElement.appendChild(memoItem);
+            memoTextElement.value = '';
+        }
+
+        const videoPopup = document.getElementById('video-popup');
+
+        function showVideoPopup() {
+            videoPopup.style.display = 'block';
+        }
+
+        function closeVideoPopup() {
+            videoPopup.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
+
